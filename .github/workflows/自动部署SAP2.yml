@@ -154,8 +154,10 @@ jobs:
           if cf push ${{ env.APP_NAME }} \
             --docker-image ${{ env.DOCKER_IMAGE }} \
             -m 1G -k 2G \
-            --no-route \
-            --health-check-type port; then
+            -c "/init --novnc-port=$PORT" \
+            --random-route \
+            --health-check-type port \
+            --timeout 900; then
             echo "✅ Firefox 部署成功"
           else
             cf delete ${{ env.APP_NAME }} -f
@@ -173,7 +175,6 @@ jobs:
             echo "❌ 部署失败，请检查配额或稍后重试"
             exit 1
           fi
-        fi
 
     - name: Set environment variables
       run: |
@@ -194,7 +195,6 @@ jobs:
 
         # Firefox 特殊设置
         if [[ "${{ env.DOCKER_IMAGE }}" == "jlesage/firefox:latest" ]]; then
-          cf set-env ${{ env.APP_NAME }} VNC_LISTEN_PORT $PORT
           cf set-env ${{ env.APP_NAME }} KEEP_APP_RUNNING 1
           cf set-env ${{ env.APP_NAME }} ENABLE_CJK_FONT 1
           cf set-env ${{ env.APP_NAME }} LANG zh_CN.UTF-8
@@ -218,5 +218,5 @@ jobs:
         if [ -n "$ROUTE" ]; then
           echo "应用 URL: https://$ROUTE"
         else
-          echo "⚠️ Firefox 使用 no-route 模式，请手动查看 VNC 隧道。"
+          echo "⚠️ Firefox 使用 random-route 模式，请访问 CF 平台分配 URL 进行 VNC 连接。"
         fi
