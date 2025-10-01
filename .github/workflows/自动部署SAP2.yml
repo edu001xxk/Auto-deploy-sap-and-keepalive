@@ -1,7 +1,7 @@
-name: 自动部署 SAP
+name: 自动部署 SAP & Firefox
 
 on:
-  workflow_dispatch:  # 只允许手动触发
+  workflow_dispatch:
     inputs:
       type:
         description: '选择部署的节点类型'
@@ -12,7 +12,7 @@ on:
           - ws直连
           - xhttp直连
           - Argo隧道CDN
-          - Firefox 浏览器   # ✅ 新增 Firefox 部署选项
+          - Firefox 浏览器
       region:
         description: '选择部署区域'
         required: true
@@ -21,34 +21,10 @@ on:
         options:
           - SG(free)
           - US(free)
-          - AWS-AU(Sydney)
-          - AWS-BR(São Paulo)
-          - AWS-KR(Seoul)
-          - AWS-CA(Montreal)
           - AWS-US(VA)
-          - AWS-US(OR)
           - AWS-EU(Frankfurt)
-          - AWS-JP(Tokyo)
-          - AWS-SG(Singapore)
-          - GCP-AU(Sydney)
-          - GCP-BR(São Paulo)
           - GCP-US(IA)
-          - GCP-EU(Frankfurt)
-          - GCP-JP(Osaka)
-          - GCP-JP(Tokyo)
-          - GCP-IL(Tel Aviv)
-          - GCP-IN(Mumbai)
-          - GCP-KSA(Dammam)
-          - Azure-AU(Sydney)
-          - Azure-BR(São Paulo)
-          - Azure-CA(Montreal)
           - Azure-US(VA)
-          - Azure-US(WA)
-          - Azure-EU(Netherlands)
-          - Azure-JP(Tokyo)
-          - Azure-SG(Singapore)
-          - Neo-UAE(Dubai)
-          - Neo-KSA(Riyadh)
       app_name:
         description: '应用名称（可选，留空则自动生成）'
         required: false
@@ -75,7 +51,6 @@ jobs:
     - name: Determine CF API endpoint and app name
       run: |
         RANDOM_STR=$(head /dev/urandom | tr -dc 'a-z' | head -c 6)
-
         case "${{ github.event.inputs.region }}" in
           "SG(free)")
             echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
@@ -85,117 +60,21 @@ jobs:
             echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=free-us$RANDOM_STR" >> $GITHUB_ENV
             ;;
-          "AWS-AU(Sydney)")
-            echo "CF_API=https://api.cf.ap10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-au$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-BR(São Paulo)")
-            echo "CF_API=https://api.cf.br10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-br$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-KR(Seoul)")
-            echo "CF_API=https://api.cf.ap12.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-kr$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-CA(Montreal)")
-            echo "CF_API=https://api.cf.ca10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-ca$RANDOM_STR" >> $GITHUB_ENV
-            ;;
           "AWS-US(VA)")
             echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=aws-usva$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-US(OR)")
-            echo "CF_API=https://api.cf.us11.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-usor$RANDOM_STR" >> $GITHUB_ENV
             ;;
           "AWS-EU(Frankfurt)")
             echo "CF_API=https://api.cf.eu10-005.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=aws-eu$RANDOM_STR" >> $GITHUB_ENV
             ;;
-          "AWS-JP(Tokyo)")
-            echo "CF_API=https://api.cf.jp10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-jp$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-SG(Singapore)")
-            echo "CF_API=https://api.cf.ap11.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-AU(Sydney)")
-            echo "CF_API=https://api.cf.ap30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-au$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-BR(São Paulo)")
-            echo "CF_API=https://api.cf.br30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-br$RANDOM_STR" >> $GITHUB_ENV
-            ;;
           "GCP-US(IA)")
             echo "CF_API=https://api.cf.us30.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=gcp-us$RANDOM_STR" >> $GITHUB_ENV
             ;;
-          "GCP-EU(Frankfurt)")
-            echo "CF_API=https://api.cf.eu30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-eu$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-JP(Osaka)")
-            echo "CF_API=https://api.cf.jp30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-jpo$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-JP(Tokyo)")
-            echo "CF_API=https://api.cf.jp31.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-jpt$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-IL(Tel Aviv)")
-            echo "CF_API=https://api.cf.il30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-il$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-IN(Mumbai)")
-            echo "CF_API=https://api.cf.in30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-in$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-KSA(Dammam)")
-            echo "CF_API=https://api.cf.sa31.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-sa$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-AU(Sydney)")
-            echo "CF_API=https://api.cf.ap20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-au$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-BR(São Paulo)")
-            echo "CF_API=https://api.cf.br20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-br$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-CA(Montreal)")
-            echo "CF_API=https://api.cf.ca20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-ca$RANDOM_STR" >> $GITHUB_ENV
-            ;;
           "Azure-US(VA)")
             echo "CF_API=https://api.cf.us21.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=az-va$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-US(WA)")
-            echo "CF_API=https://api.cf.us20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-wa$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-EU(Netherlands)")
-            echo "CF_API=https://api.cf.eu20-001.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-eu$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-JP(Tokyo)")
-            echo "CF_API=https://api.cf.jp20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-jp$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-SG(Singapore)")
-            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Neo-UAE(Dubai)")
-            echo "CF_API=https://api.cf.neo-ae1.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=neo-uae$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Neo-KSA(Riyadh)")
-            echo "CF_API=https://api.cf.neo-sa1.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=neo-ksa$RANDOM_STR" >> $GITHUB_ENV
             ;;
         esac
 
@@ -206,15 +85,20 @@ jobs:
         if [[ -n "${{ secrets.DOCKER_IMAGE }}" ]]; then
           echo "DOCKER_IMAGE=${{ secrets.DOCKER_IMAGE }}" >> $GITHUB_ENV
         else
-          if [ "${{ github.event.inputs.type }}" = "ws直连" ]; then
-            echo "DOCKER_IMAGE=ghcr.io/eooce/ws:latest" >> $GITHUB_ENV
-          elif [ "${{ github.event.inputs.type }}" = "xhttp直连" ]; then
-            echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV
-          elif [ "${{ github.event.inputs.type }}" = "Firefox 浏览器" ]; then
-            echo "DOCKER_IMAGE=jlesage/firefox:latest" >> $GITHUB_ENV
-          else 
-            echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV
-          fi
+          case "${{ github.event.inputs.type }}" in
+            "ws直连")
+              echo "DOCKER_IMAGE=ghcr.io/eooce/ws:latest" >> $GITHUB_ENV
+              ;;
+            "xhttp直连")
+              echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV
+              ;;
+            "Firefox 浏览器")
+              echo "DOCKER_IMAGE=jlesage/firefox:latest" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV
+              ;;
+          esac
         fi
 
         echo "使用API端点: $CF_API"
@@ -232,17 +116,24 @@ jobs:
 
     - name: Deploy application
       run: |
-        if [ "${{ github.event.inputs.type }}" = "Firefox 浏览器" ]; then
-          echo "🚀 部署 Firefox 浏览器..."
-          if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m 1G -k 2G --health-check-type none; then
-            echo "Firefox 部署成功 ✅"
+        if [[ "${{ env.DOCKER_IMAGE }}" == "jlesage/firefox:latest" ]]; then
+          echo "🚀 正在部署 Firefox 浏览器..."
+          if cf push ${{ env.APP_NAME }} \
+            --docker-image ${{ env.DOCKER_IMAGE }} \
+            -m 1G -k 2G \
+            --no-route \
+            --health-check-type port; then
+            echo "Firefox 部署成功"
           else
             cf delete ${{ env.APP_NAME }} -f
-            echo "🚨 Firefox 部署失败，可能是资源不足或免费配额限制"
+            echo "❌ Firefox 部署失败，可能是资源不足或免费配额限制"
             exit 1
           fi
         else
-          if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k 256M --health-check-type port; then
+          if cf push ${{ env.APP_NAME }} \
+            --docker-image ${{ env.DOCKER_IMAGE }} \
+            -m ${{ env.MEMORY }} -k 256M \
+            --health-check-type port; then
             echo "Deployment successful"
           else
             cf delete ${{ env.APP_NAME }} -f
@@ -267,7 +158,9 @@ jobs:
         cf set-env ${{ env.APP_NAME }} CHAT_ID "${{ secrets.CHAT_ID }}"
         cf set-env ${{ env.APP_NAME }} BOT_TOKEN "${{ secrets.BOT_TOKEN }}"
 
-        if [ "${{ github.event.inputs.type }}" = "Firefox 浏览器" ]; then
+        # Firefox 特殊设置
+        if [[ "${{ env.DOCKER_IMAGE }}" == "jlesage/firefox:latest" ]]; then
+          cf set-env ${{ env.APP_NAME }} VNC_LISTEN_PORT $PORT
           cf set-env ${{ env.APP_NAME }} KEEP_APP_RUNNING 1
           cf set-env ${{ env.APP_NAME }} ENABLE_CJK_FONT 1
           cf set-env ${{ env.APP_NAME }} LANG zh_CN.UTF-8
@@ -281,19 +174,17 @@ jobs:
     - name: Verify deployment
       run: |
         cf app ${{ env.APP_NAME }}
-        echo "Deployment completed successfully!"
 
     - name: 详细部署信息
       run: |
-        echo "🚀 部署完成！详细信息如下："
-        echo "区域(Region): ${{ github.event.inputs.region }}"
-        echo "组织(ORG): ${{ env.ORG }}"
-        echo "空间(SPACE): ${{ env.SPACE }}"
-        echo "应用名称(App Name): ${{ env.APP_NAME }}"
-
+        echo "🚀 部署完成！"
+        echo "区域: ${{ github.event.inputs.region }}"
+        echo "组织: ${{ env.ORG }}"
+        echo "空间: ${{ env.SPACE }}"
+        echo "应用名称: ${{ env.APP_NAME }}"
         ROUTE=$(cf app ${{ env.APP_NAME }} | grep "routes:" | awk '{print $2}')
         if [ -n "$ROUTE" ]; then
-          echo "应用 URL (APP_URL): https://$ROUTE"
+          echo "应用 URL: https://$ROUTE"
         else
-          echo "⚠️ 未找到应用路由，请检查部署状态。"
+          echo "⚠️ Firefox 使用 no-route 模式，请手动查看 VNC 隧道。"
         fi
