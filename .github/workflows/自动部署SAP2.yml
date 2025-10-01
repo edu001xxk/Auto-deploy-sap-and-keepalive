@@ -86,8 +86,7 @@ jobs:
           # 免费区域
           "SG(free)") CF_API="https://api.cf.ap21.hana.ondemand.com"; APP_NAME="free-sg$RANDOM_STR" ;;
           "US(free)") CF_API="https://api.cf.us10-001.hana.ondemand.com"; APP_NAME="free-us$RANDOM_STR" ;;
-
-          # AWS
+          # AWS 区域
           "AWS-AU(Sydney)") CF_API="https://api.cf.ap10.hana.ondemand.com"; APP_NAME="aws-au$RANDOM_STR" ;;
           "AWS-BR(São Paulo)") CF_API="https://api.cf.br10.hana.ondemand.com"; APP_NAME="aws-br$RANDOM_STR" ;;
           "AWS-KR(Seoul)") CF_API="https://api.cf.ap12.hana.ondemand.com"; APP_NAME="aws-kr$RANDOM_STR" ;;
@@ -97,8 +96,7 @@ jobs:
           "AWS-EU(Frankfurt)") CF_API="https://api.cf.eu10-005.hana.ondemand.com"; APP_NAME="aws-eu$RANDOM_STR" ;;
           "AWS-JP(Tokyo)") CF_API="https://api.cf.jp10.hana.ondemand.com"; APP_NAME="aws-jp$RANDOM_STR" ;;
           "AWS-SG(Singapore)") CF_API="https://api.cf.ap11.hana.ondemand.com"; APP_NAME="aws-sg$RANDOM_STR" ;;
-
-          # GCP
+          # GCP 区域
           "GCP-AU(Sydney)") CF_API="https://api.cf.ap30.hana.ondemand.com"; APP_NAME="gcp-au$RANDOM_STR" ;;
           "GCP-BR(São Paulo)") CF_API="https://api.cf.br30.hana.ondemand.com"; APP_NAME="gcp-br$RANDOM_STR" ;;
           "GCP-US(IA)") CF_API="https://api.cf.us30.hana.ondemand.com"; APP_NAME="gcp-us$RANDOM_STR" ;;
@@ -108,8 +106,7 @@ jobs:
           "GCP-IL(Tel Aviv)") CF_API="https://api.cf.il30.hana.ondemand.com"; APP_NAME="gcp-il$RANDOM_STR" ;;
           "GCP-IN(Mumbai)") CF_API="https://api.cf.in30.hana.ondemand.com"; APP_NAME="gcp-in$RANDOM_STR" ;;
           "GCP-KSA(Dammam)") CF_API="https://api.cf.sa31.hana.ondemand.com"; APP_NAME="gcp-sa$RANDOM_STR" ;;
-
-          # Azure
+          # Azure 区域
           "Azure-AU(Sydney)") CF_API="https://api.cf.ap20.hana.ondemand.com"; APP_NAME="az-au$RANDOM_STR" ;;
           "Azure-BR(São Paulo)") CF_API="https://api.cf.br20.hana.ondemand.com"; APP_NAME="az-br$RANDOM_STR" ;;
           "Azure-CA(Montreal)") CF_API="https://api.cf.ca20.hana.ondemand.com"; APP_NAME="az-ca$RANDOM_STR" ;;
@@ -118,8 +115,7 @@ jobs:
           "Azure-EU(Netherlands)") CF_API="https://api.cf.eu20-001.hana.ondemand.com"; APP_NAME="az-eu$RANDOM_STR" ;;
           "Azure-JP(Tokyo)") CF_API="https://api.cf.jp20.hana.ondemand.com"; APP_NAME="az-jp$RANDOM_STR" ;;
           "Azure-SG(Singapore)") CF_API="https://api.cf.ap21.hana.ondemand.com"; APP_NAME="az-sg$RANDOM_STR" ;;
-
-          # SAP Neo
+          # SAP Neo 区域
           "Neo-UAE(Dubai)") CF_API="https://api.cf.neo-ae1.hana.ondemand.com"; APP_NAME="neo-uae$RANDOM_STR" ;;
           "Neo-KSA(Riyadh)") CF_API="https://api.cf.neo-sa1.hana.ondemand.com"; APP_NAME="neo-ksa$RANDOM_STR" ;;
         esac
@@ -149,10 +145,14 @@ jobs:
 
     - name: Deploy application
       run: |
-        if [[ "${{ env.DOCKER_IMAGE }}" == "jlesage/firefox:latest" ]]; then
+        DOCKER_IMAGE="${{ env.DOCKER_IMAGE }}"
+        APP_NAME="${{ env.APP_NAME }}"
+        MEMORY="${{ env.MEMORY }}"
+
+        if [[ "$DOCKER_IMAGE" == "jlesage/firefox:latest" ]]; then
           echo "🚀 正在部署 Firefox 浏览器..."
-          if cf push ${{ env.APP_NAME }} \
-            --docker-image ${{ env.DOCKER_IMAGE }} \
+          if cf push "$APP_NAME" \
+            --docker-image "$DOCKER_IMAGE" \
             -m 1G -k 2G \
             -c "/init --novnc-port=$PORT" \
             --random-route \
@@ -160,25 +160,26 @@ jobs:
             --timeout 900; then
             echo "✅ Firefox 部署成功"
           else
-            cf delete ${{ env.APP_NAME }} -f
+            cf delete "$APP_NAME" -f
             echo "❌ Firefox 部署失败，可能是资源不足或免费配额限制"
             exit 1
           fi
         else
-          if cf push ${{ env.APP_NAME }} \
-            --docker-image ${{ env.DOCKER_IMAGE }} \
-            -m ${{ env.MEMORY }} -k 256M \
+          echo "🚀 正在部署节点类型应用..."
+          if cf push "$APP_NAME" \
+            --docker-image "$DOCKER_IMAGE" \
+            -m "$MEMORY" -k 256M \
             --health-check-type port; then
             echo "✅ 部署成功"
           else
-            cf delete ${{ env.APP_NAME }} -f
+            cf delete "$APP_NAME" -f
             echo "❌ 部署失败，请检查配额或稍后重试"
             exit 1
           fi
+        fi
 
     - name: Set environment variables
       run: |
-        # 基础环境变量
         cf set-env ${{ env.APP_NAME }} NAME "SAP"
         cf set-env ${{ env.APP_NAME }} UUID "${{ secrets.UUID }}"
         cf set-env ${{ env.APP_NAME }} NEZHA_SERVER "${{ secrets.NEZHA_SERVER }}"
@@ -193,7 +194,6 @@ jobs:
         cf set-env ${{ env.APP_NAME }} CHAT_ID "${{ secrets.CHAT_ID }}"
         cf set-env ${{ env.APP_NAME }} BOT_TOKEN "${{ secrets.BOT_TOKEN }}"
 
-        # Firefox 特殊设置
         if [[ "${{ env.DOCKER_IMAGE }}" == "jlesage/firefox:latest" ]]; then
           cf set-env ${{ env.APP_NAME }} KEEP_APP_RUNNING 1
           cf set-env ${{ env.APP_NAME }} ENABLE_CJK_FONT 1
