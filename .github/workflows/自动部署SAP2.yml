@@ -19,12 +19,41 @@ on:
         default: 'US(free)'
         type: choice
         options:
+          # 免费区域
           - SG(free)
           - US(free)
+          # AWS 区域
+          - AWS-AU(Sydney)
+          - AWS-BR(São Paulo)
+          - AWS-KR(Seoul)
+          - AWS-CA(Montreal)
           - AWS-US(VA)
+          - AWS-US(OR)
           - AWS-EU(Frankfurt)
+          - AWS-JP(Tokyo)
+          - AWS-SG(Singapore)
+          # GCP 区域
+          - GCP-AU(Sydney)
+          - GCP-BR(São Paulo)
           - GCP-US(IA)
+          - GCP-EU(Frankfurt)
+          - GCP-JP(Osaka)
+          - GCP-JP(Tokyo)
+          - GCP-IL(Tel Aviv)
+          - GCP-IN(Mumbai)
+          - GCP-KSA(Dammam)
+          # Azure 区域
+          - Azure-AU(Sydney)
+          - Azure-BR(São Paulo)
+          - Azure-CA(Montreal)
           - Azure-US(VA)
+          - Azure-US(WA)
+          - Azure-EU(Netherlands)
+          - Azure-JP(Tokyo)
+          - Azure-SG(Singapore)
+          # SAP Neo 区域
+          - Neo-UAE(Dubai)
+          - Neo-KSA(Riyadh)
       app_name:
         description: '应用名称（可选，留空则自动生成）'
         required: false
@@ -51,66 +80,70 @@ jobs:
     - name: Determine CF API endpoint and app name
       run: |
         RANDOM_STR=$(head /dev/urandom | tr -dc 'a-z' | head -c 6)
-        case "${{ github.event.inputs.region }}" in
-          "SG(free)")
-            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=free-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "US(free)")
-            echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=free-us$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-US(VA)")
-            echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-usva$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-EU(Frankfurt)")
-            echo "CF_API=https://api.cf.eu10-005.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-eu$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-US(IA)")
-            echo "CF_API=https://api.cf.us30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-us$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-US(VA)")
-            echo "CF_API=https://api.cf.us21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-va$RANDOM_STR" >> $GITHUB_ENV
-            ;;
+        REGION="${{ github.event.inputs.region }}"
+
+        case "$REGION" in
+          # 免费区域
+          "SG(free)") CF_API="https://api.cf.ap21.hana.ondemand.com"; APP_NAME="free-sg$RANDOM_STR" ;;
+          "US(free)") CF_API="https://api.cf.us10-001.hana.ondemand.com"; APP_NAME="free-us$RANDOM_STR" ;;
+
+          # AWS
+          "AWS-AU(Sydney)") CF_API="https://api.cf.ap10.hana.ondemand.com"; APP_NAME="aws-au$RANDOM_STR" ;;
+          "AWS-BR(São Paulo)") CF_API="https://api.cf.br10.hana.ondemand.com"; APP_NAME="aws-br$RANDOM_STR" ;;
+          "AWS-KR(Seoul)") CF_API="https://api.cf.ap12.hana.ondemand.com"; APP_NAME="aws-kr$RANDOM_STR" ;;
+          "AWS-CA(Montreal)") CF_API="https://api.cf.ca10.hana.ondemand.com"; APP_NAME="aws-ca$RANDOM_STR" ;;
+          "AWS-US(VA)") CF_API="https://api.cf.us10-001.hana.ondemand.com"; APP_NAME="aws-usva$RANDOM_STR" ;;
+          "AWS-US(OR)") CF_API="https://api.cf.us11.hana.ondemand.com"; APP_NAME="aws-usor$RANDOM_STR" ;;
+          "AWS-EU(Frankfurt)") CF_API="https://api.cf.eu10-005.hana.ondemand.com"; APP_NAME="aws-eu$RANDOM_STR" ;;
+          "AWS-JP(Tokyo)") CF_API="https://api.cf.jp10.hana.ondemand.com"; APP_NAME="aws-jp$RANDOM_STR" ;;
+          "AWS-SG(Singapore)") CF_API="https://api.cf.ap11.hana.ondemand.com"; APP_NAME="aws-sg$RANDOM_STR" ;;
+
+          # GCP
+          "GCP-AU(Sydney)") CF_API="https://api.cf.ap30.hana.ondemand.com"; APP_NAME="gcp-au$RANDOM_STR" ;;
+          "GCP-BR(São Paulo)") CF_API="https://api.cf.br30.hana.ondemand.com"; APP_NAME="gcp-br$RANDOM_STR" ;;
+          "GCP-US(IA)") CF_API="https://api.cf.us30.hana.ondemand.com"; APP_NAME="gcp-us$RANDOM_STR" ;;
+          "GCP-EU(Frankfurt)") CF_API="https://api.cf.eu30.hana.ondemand.com"; APP_NAME="gcp-eu$RANDOM_STR" ;;
+          "GCP-JP(Osaka)") CF_API="https://api.cf.jp30.hana.ondemand.com"; APP_NAME="gcp-jpo$RANDOM_STR" ;;
+          "GCP-JP(Tokyo)") CF_API="https://api.cf.jp31.hana.ondemand.com"; APP_NAME="gcp-jpt$RANDOM_STR" ;;
+          "GCP-IL(Tel Aviv)") CF_API="https://api.cf.il30.hana.ondemand.com"; APP_NAME="gcp-il$RANDOM_STR" ;;
+          "GCP-IN(Mumbai)") CF_API="https://api.cf.in30.hana.ondemand.com"; APP_NAME="gcp-in$RANDOM_STR" ;;
+          "GCP-KSA(Dammam)") CF_API="https://api.cf.sa31.hana.ondemand.com"; APP_NAME="gcp-sa$RANDOM_STR" ;;
+
+          # Azure
+          "Azure-AU(Sydney)") CF_API="https://api.cf.ap20.hana.ondemand.com"; APP_NAME="az-au$RANDOM_STR" ;;
+          "Azure-BR(São Paulo)") CF_API="https://api.cf.br20.hana.ondemand.com"; APP_NAME="az-br$RANDOM_STR" ;;
+          "Azure-CA(Montreal)") CF_API="https://api.cf.ca20.hana.ondemand.com"; APP_NAME="az-ca$RANDOM_STR" ;;
+          "Azure-US(VA)") CF_API="https://api.cf.us21.hana.ondemand.com"; APP_NAME="az-va$RANDOM_STR" ;;
+          "Azure-US(WA)") CF_API="https://api.cf.us20.hana.ondemand.com"; APP_NAME="az-wa$RANDOM_STR" ;;
+          "Azure-EU(Netherlands)") CF_API="https://api.cf.eu20-001.hana.ondemand.com"; APP_NAME="az-eu$RANDOM_STR" ;;
+          "Azure-JP(Tokyo)") CF_API="https://api.cf.jp20.hana.ondemand.com"; APP_NAME="az-jp$RANDOM_STR" ;;
+          "Azure-SG(Singapore)") CF_API="https://api.cf.ap21.hana.ondemand.com"; APP_NAME="az-sg$RANDOM_STR" ;;
+
+          # SAP Neo
+          "Neo-UAE(Dubai)") CF_API="https://api.cf.neo-ae1.hana.ondemand.com"; APP_NAME="neo-uae$RANDOM_STR" ;;
+          "Neo-KSA(Riyadh)") CF_API="https://api.cf.neo-sa1.hana.ondemand.com"; APP_NAME="neo-ksa$RANDOM_STR" ;;
         esac
+
+        echo "CF_API=$CF_API" >> $GITHUB_ENV
+        echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
 
         if [ -n "${{ github.event.inputs.app_name }}" ]; then
           echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
         fi
 
-        if [[ -n "${{ secrets.DOCKER_IMAGE }}" ]]; then
-          echo "DOCKER_IMAGE=${{ secrets.DOCKER_IMAGE }}" >> $GITHUB_ENV
-        else
-          case "${{ github.event.inputs.type }}" in
-            "ws直连")
-              echo "DOCKER_IMAGE=ghcr.io/eooce/ws:latest" >> $GITHUB_ENV
-              ;;
-            "xhttp直连")
-              echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV
-              ;;
-            "Firefox 浏览器")
-              echo "DOCKER_IMAGE=jlesage/firefox:latest" >> $GITHUB_ENV
-              ;;
-            *)
-              echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV
-              ;;
-          esac
-        fi
-
-        echo "使用API端点: $CF_API"
-        echo "应用名称: $APP_NAME"
-        echo "部署类型: ${{ env.DOCKER_IMAGE }}"
+        case "${{ github.event.inputs.type }}" in
+          "ws直连") echo "DOCKER_IMAGE=ghcr.io/eooce/ws:latest" >> $GITHUB_ENV ;;
+          "xhttp直连") echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV ;;
+          "Firefox 浏览器") echo "DOCKER_IMAGE=jlesage/firefox:latest" >> $GITHUB_ENV ;;
+          *) echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV ;;
+        esac
 
     - name: Login to Cloud Foundry
       run: |
         cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}"
         ORG=$(cf orgs | sed -n '4p')
-        echo "ORG=$ORG" >> $GITHUB_ENV
         SPACE=$(cf spaces | sed -n '4p')
+        echo "ORG=$ORG" >> $GITHUB_ENV
         echo "SPACE=$SPACE" >> $GITHUB_ENV
         cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE"
 
@@ -123,7 +156,7 @@ jobs:
             -m 1G -k 2G \
             --no-route \
             --health-check-type port; then
-            echo "Firefox 部署成功"
+            echo "✅ Firefox 部署成功"
           else
             cf delete ${{ env.APP_NAME }} -f
             echo "❌ Firefox 部署失败，可能是资源不足或免费配额限制"
@@ -134,16 +167,17 @@ jobs:
             --docker-image ${{ env.DOCKER_IMAGE }} \
             -m ${{ env.MEMORY }} -k 256M \
             --health-check-type port; then
-            echo "Deployment successful"
+            echo "✅ 部署成功"
           else
             cf delete ${{ env.APP_NAME }} -f
-            echo "伙计,没资源了,部署失败,请明天早上8:20至9:00再尝试部署,已清理失败部署残留"
+            echo "❌ 部署失败，请检查配额或稍后重试"
             exit 1
           fi
         fi
 
     - name: Set environment variables
       run: |
+        # 基础环境变量
         cf set-env ${{ env.APP_NAME }} NAME "SAP"
         cf set-env ${{ env.APP_NAME }} UUID "${{ secrets.UUID }}"
         cf set-env ${{ env.APP_NAME }} NEZHA_SERVER "${{ secrets.NEZHA_SERVER }}"
@@ -168,12 +202,10 @@ jobs:
         fi
 
     - name: Restage application
-      run: |
-        cf restage ${{ env.APP_NAME }}
+      run: cf restage ${{ env.APP_NAME }}
 
     - name: Verify deployment
-      run: |
-        cf app ${{ env.APP_NAME }}
+      run: cf app ${{ env.APP_NAME }}
 
     - name: 详细部署信息
       run: |
