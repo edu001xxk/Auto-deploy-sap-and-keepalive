@@ -233,27 +233,46 @@ jobs:
 
     - name: Deploy application
       run: |
-        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --var VNC_PASSWORD="${{ secrets.VNC_PASSWORD || '123456' }}" --health-check-type port; then
+        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
           echo "Deployment successful"
         else
           cf delete ${{ env.APP_NAME }} -f
-          echo "部署失败,试用版可能资源不足，请明天早上8:20至9:00再尝试部署,已清理失败部署残留"
+          echo "伙计,没资源了,部署失败,请明天早上8:10至9:00再尝试部署,已清理失败部署残留"
           exit 1
         fi
+        
+    - name: Set environment variables and restart app
+      run: |
+        # VNC密码和语言环境变量
+        cf set-env ${{ env.APP_NAME }} LANG "${{ secrets.LANG || 'zh_CN.UTF-8' }}"
+        cf set-env ${{ env.APP_NAME }} VNC_PASSWORD "${{ secrets.VNC_PASSWORD || '123456' }}"
+        
+        # 可选：从文件读取环境变量(如果存在)
+        if [ -f .env ]; then
+          while IFS= read -r line; do
+            if [[ ! "$line" =~ ^# ]] && [[ -n "$line" ]]; then
+              IFS='=' read -r key value <<< "$line"
+              cf set-env ${{ env.APP_NAME }} "$key" "$value"
+            fi
+          done < .env
+        fi
+        
+        sleep 3
+        
+        cf restage ${{ env.APP_NAME }}
 
     - name: Verify deployment
       run: |
-        cf app ${{ env.APP_NAME }}
         STATUS=$(cf app ${{ env.APP_NAME }} | grep "requested state:" | awk '{print $3}')
         if [ "$STATUS" = "started" ]; then
-          echo "✅ Firefox启动成功"
+          echo "✅ firefox启动成功"
         else
           echo "❌ 应用启动失败，当前状态: $STATUS"
           echo "查看应用日志:"
           cf logs ${{ env.APP_NAME }} --recent
           exit 1
         fi
-    
+        
     - name: 详细部署信息
       run: |
         echo "🚀 部署完成！详细信息如下："
