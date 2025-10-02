@@ -1,0 +1,150 @@
+name: 自动部署Ubuntu容器到SAP
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: '选择部署区域'
+        required: true
+        default: 'US(free)'
+        type: choice
+        options:
+          # 免费区域
+          - SG(free)
+          - US(free)
+          # AWS 区域
+          - AWS-AU(Sydney)
+          - AWS-BR(São Paulo)
+          - AWS-KR(Seoul)
+          - AWS-CA(Montreal)
+          - AWS-US(VA)
+          - AWS-US(OR)
+          - AWS-EU(Frankfurt)
+          - AWS-JP(Tokyo)
+          - AWS-SG(Singapore)
+          # GCP 区域
+          - GCP-AU(Sydney)
+          - GCP-BR(São Paulo)
+          - GCP-US(IA)
+          - GCP-EU(Frankfurt)
+          - GCP-JP(Osaka)
+          - GCP-JP(Tokyo)
+          - GCP-IL(Tel Aviv)
+          - GCP-IN(Mumbai)
+          - GCP-KSA(Dammam)
+          # Azure 区域
+          - Azure-AU(Sydney)
+          - Azure-BR(São Paulo)
+          - Azure-CA(Montreal)
+          - Azure-US(VA)
+          - Azure-US(WA)
+          - Azure-EU(Netherlands)
+          - Azure-JP(Tokyo)
+          - Azure-SG(Singapore)
+          # SAP Neo 区域
+          - Neo-UAE(Dubai)
+          - Neo-KSA(Riyadh)
+      app_name:
+        description: '应用名称（可选，留空则自动生成）'
+        required: false
+        default: ''
+
+env:
+  DOCKER_IMAGE: ghcr.io/vevc/ubuntu:25.7.14
+  MEMORY: ${{ secrets.MEMORY || '1024M' }}
+  DISK: ${{ secrets.DISK || '2048M' }}
+
+jobs:
+  deploy-app:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install CF CLI
+      run: |
+        wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+        echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+        sudo apt-get update
+        sudo apt-get install -y cf8-cli
+
+    - name: Determine CF API endpoint and app name
+      run: |
+        RANDOM_STR=$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 6)
+
+        case "${{ github.event.inputs.region }}" in
+          "US(free)")
+            echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=ubuntu-freeus$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          "AWS-JP(Tokyo)")
+            echo "CF_API=https://api.cf.jp10.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=ubuntu-awsjp$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          # 其他区域可以按需补充
+        esac
+
+        if [ -n "${{ github.event.inputs.app_name }}" ]; then
+          echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+        fi
+
+    - name: Login to Cloud Foundry
+      run: |
+        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}"
+        ORG=$(cf orgs | sed -n '4p')
+        echo "ORG=$ORG" >> $GITHUB_ENV
+        SPACE=$(cf spaces | sed -n '4p')
+        echo "SPACE=$SPACE" >> $GITHUB_ENV
+        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE"
+
+    - name: Deploy Ubuntu container
+      run: |
+        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port --random-route; then
+          echo "Deployment successful"
+        else
+          cf delete ${{ env.APP_NAME }} -f
+          echo "💥 部署失败，请稍后再试"
+          exit 1
+        fi
+
+    - name: Set environment variables and restart app
+      run: |
+        cf set-env ${{ env.APP_NAME }} SSH_USER "xiatian"
+        cf set-env ${{ env.APP_NAME }} SSH_PASSWORD "${{ secrets.SSH_PASSWORD }}"
+        cf set-env ${{ env.APP_NAME }} DISK_PATH "/xiatian"
+        sleep 3
+        cf restage ${{ env.APP_NAME }}
+
+    - name: Verify deployment
+      run: |
+        STATUS=$(cf app ${{ env.APP_NAME }} | grep "requested state:" | awk '{print $3}')
+        if [ "$STATUS" != "started" ]; then
+          echo "❌ 应用启动失败，状态: $STATUS"
+          cf logs ${{ env.APP_NAME }} --recent
+          exit 1
+        fi
+
+    - name: Create and bind TCP Route for SSH
+      run: |
+        TCP_DOMAIN=$(cf domains | awk '/tcp\./{print $1; exit}')
+        if [ -z "$TCP_DOMAIN" ]; then
+          echo "⚠️ 当前环境不支持 TCP Routing，跳过 TCP Route 创建。"
+          exit 0
+        fi
+        ROUTE_OUTPUT=$(cf create-route $SPACE $TCP_DOMAIN --random-port --tcp)
+        echo "$ROUTE_OUTPUT"
+        TCP_PORT=$(echo "$ROUTE_OUTPUT" | grep -oE '[0-9]{4,5}' | tail -n 1)
+        cf map-route ${{ env.APP_NAME }} $TCP_DOMAIN --port $TCP_PORT
+        echo "SSH_HOST=$TCP_DOMAIN" >> $GITHUB_ENV
+        echo "SSH_PORT=$TCP_PORT" >> $GITHUB_ENV
+
+    - name: Show SSH connection info
+      if: env.SSH_HOST != ''
+      run: |
+        echo "🚀 SSH 连接信息"
+        echo "Host: $SSH_HOST"
+        echo "Port: $SSH_PORT"
+        echo "Username: xiatian"
+        echo "Password: (GitHub Secrets.SSH_PASSWORD)"
+        echo "👉 ssh xiatian@$SSH_HOST -p $SSH_PORT"
