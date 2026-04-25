@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  labels:
+    app: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+        - name: webapp-container
+          image: eooce/python:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: UUID
+              value: "359f09e8-fcd6-413c-8a07-7ed16eda937d" # 节点UUID
+            - name: NEZHA_SERVER
+              value: ""        # 双引号内填写哪吒v1地址，没有留空：nezha.xxx.com:8008
+            - name: NEZHA_KEY
+              value: ""        # 双引号内填写哪吒一key
+            - name: ARGO_PORT
+              value: "8001"    # 固定隧道端口，在cloudflare里设置和这里一致即可
+            - name: ARGO_DOMAIN
+              value: ""        # 双引号内固定隧道域名，留空使用临时隧道
+            - name: ARGO_AUTH
+              value: ""        # 双引号内固定隧道密钥json或token
+            - name: CHAT_ID
+              value: ""        # 必填，双引号内填写自己的TG chat id发送节点到自己的TG，TG里 @laowang_serv00_bot 获取
+            - name: BOT_TOKEN
+              value: ""
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  selector:
+    app: webapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

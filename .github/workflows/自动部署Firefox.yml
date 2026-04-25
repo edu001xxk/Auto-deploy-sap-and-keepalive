@@ -11,7 +11,13 @@ on:
         options:
           #  免费区域
           - SG(free)  # azure新加披
-          - US(free)  # aws美国    
+          - US(free)  # aws美国
+          # SAP 区域
+          - SAP-UAE(Dubai)
+          - SAP-AU(Sydney)
+          - SAP-US(Sterling)
+          - SAP-US-West(Colorado)
+          - SAP-JP(Tokyo)
           # AWS 区域
           - AWS-AU(Sydney)
           - AWS-BR(São Paulo)
@@ -83,6 +89,27 @@ jobs:
           "US(free)")
             echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=firefox-freeus$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          # SAP 区域
+          "SAP-UAE(Dubai)")
+            echo "CF_API=https://api.cf.ae01.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=sap-ae$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          "SAP-AU(Sydney)")
+            echo "CF_API=https://api.cf.ap01.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=sap-ap$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          "SAP-US(Sterling)")
+            echo "CF_API=https://api.cf.us01.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=sap-us1$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          "SAP-US-West(Colorado)")
+            echo "CF_API=https://api.cf.us02.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=sap-us2$RANDOM_STR" >> $GITHUB_ENV
+            ;;
+          "SAP-JP(Tokyo)")
+            echo "CF_API=https://api.cf.jp01.hana.ondemand.com" >> $GITHUB_ENV
+            echo "APP_NAME=sap-jp$RANDOM_STR" >> $GITHUB_ENV
             ;;
           # AWS 区域
           "AWS-AU(Sydney)")
