@@ -1,4 +1,4 @@
-name: 自动部署grpc代理到SAP
+name: 自动部署代理到SAP
 
 on:
   workflow_dispatch:  # 只允许手动触发
@@ -255,7 +255,7 @@ jobs:
           elif [ "${{ github.event.inputs.type }}" = "xhttp直连" ]; then
             echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV
           elif [ "${{ github.event.inputs.type }}" = "grpc直连" ]; then
-            # 这里已经替换为你专属的 grpc 镜像地址啦！
+            # 使用你亲自打包的专属 gRPC 镜像
             echo "DOCKER_IMAGE=ghcr.io/xiatian327/grpc-xray:latest" >> $GITHUB_ENV
           else 
             echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV
@@ -287,6 +287,25 @@ jobs:
       run: |
         if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
           echo "Deployment successful"
+          
+          # 判断：如果部署的是 gRPC 镜像，则为其路由开启 HTTP/2 端到端支持
+          if [[ "${{ env.DOCKER_IMAGE }}" =~ "grpc" ]]; then
+            echo "🔄 检测到 gRPC 节点，正在为路由配置 HTTP/2 端到端支持..."
+            
+            # 动态获取当前应用的完整路由
+            ROUTE=$(cf app ${{ env.APP_NAME }} | grep "routes:" | awk '{print $2}')
+            
+            if [ -n "$ROUTE" ]; then
+              # 自动拆分 Hostname 和 Domain
+              HOSTNAME=$(echo $ROUTE | cut -d'.' -f1)
+              DOMAIN=$(echo $ROUTE | cut -d'.' -f2-)
+              
+              # 核心命令：重新映射路由，强制指定后端通信协议为 http2
+              cf map-route ${{ env.APP_NAME }} $DOMAIN --hostname $HOSTNAME --app-protocol http2
+              echo "✅ 成功开启 HTTP/2 (gRPC) 支持！"
+            fi
+          fi
+          
         else
           cf delete ${{ env.APP_NAME }} -r -f
           echo "伙计,没资源了,部署失败,请明天早上8:20至9:00再尝试部署,已清理失败部署残留"
