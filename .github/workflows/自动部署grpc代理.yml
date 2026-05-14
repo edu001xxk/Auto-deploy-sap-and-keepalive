@@ -1,4 +1,4 @@
-name: 自动部署代理到SAP
+name: 自动部署grpc代理到SAP
 
 on:
   workflow_dispatch:  # 只允许手动触发
